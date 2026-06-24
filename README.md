@@ -1,0 +1,112 @@
+# iRDM — improved Representation Distribution Matching for One-Step Visual Generation
+
+Train a **one-step** image generator with **no teacher, no adversary, no trajectory** by
+matching generated and real feature distributions under a battery of frozen pretrained
+encoders. iRDM combines the preferred choice on each of the two design axes of RDM:
+
+- **Comparison** — a squared MMD with a Gaussian kernel on raw embeddings, estimated as an
+  **exact within-batch repulsion** paired with a **Nyström attraction** toward a reference
+  frozen once over the whole training set (eq. 3), fed by **large fresh generation batches**
+  (gradient caching absorbs the memory), and — for text-to-image — the **joint image-text law**.
+- **Representation** — a **battery of frozen encoders** (10 train + 4 held out), kept in
+  balance by a **proportional Lagrangian controller**.
+
+It sets the one-step ImageNet state of the art at **SW_r14 1.30**, and post-trains four-step
+FLUX.2 [klein] into a one-step model that surpasses it on GenEval (0.805 vs 0.794).
+
+## Install
+
+```bash
+pip install -e .            # torch, timm, open_clip, transformers, diffusers, ...
+# DreamSim (held-in encoder): pip install dreamsim
+# FLUX.2 path also needs the external `flux2` package + a newer transformers (separate env).
+```
+
+## Layout
+
+```
+rdm/compare/         the comparison axis: kernels, Nyström, the iRDM loss + the 6 ablation distances
+rdm/representation/  the 14-encoder battery (Table 5), generators (pMF-H, FLUX.2), the joint feature
+rdm/refprep/         the offline frozen reference precompute (the heavy one-time compute)
+rdm/train/           the loop, gradient caching, the PID-Lagrangian controller
+rdm/eval/            off-objective metrics: SW_r14 (primary), MMDr14, GenEval, PickScore
+rdm/toy/             the spiral diagnostics (Fig. 3) and the batch / distance ablations
+configs/  scripts/  tests/  reproduce.py
+```
+
+## Data
+
+Datasets are never fetched for you — you point the pipeline at images already on disk. Only
+the ImageNet path is needed for the headline ImageNet result.
+
+- **ImageNet-256** — an `ImageFolder`-style tree (flat or class-nested) for train and val.
+  Used only by the reference precompute and by evaluation, never by the training loop itself
+  (which consumes the frozen banks). Pass the roots via `IMAGENET_TRAIN` / `IMAGENET_VAL`.
+- **COCO** (FLUX text-to-image only) — build the canonical one-caption-per-image pairing once:
+  ```bash
+  python scripts/prepare_datasets.py coco \
+      --captions <captions_train2014.json> --images <train2014> --out data/coco/coco_pairs.npz
+  ```
+- **Eval-only prompt assets** (FLUX) — GenEval metadata and the Pick-a-Pic test prompts are
+  external; place them at `assets/geneval_prompts.jsonl` / `assets/pickapic_test_prompts.jsonl`
+  (see `assets/README.md`). GenEval scoring also needs a local clone of the official scorer.
+
+## Quickstart
+
+```bash
+# Self-contained spiral diagnostic (no data/weights): Fig. 3
+python reproduce.py fig3 --smoke         # ~5 s wiring check; drop --smoke for the real figure
+
+# Download the released pMF-H generator + warm the encoder cache
+python scripts/download_checkpoints.py --pmfh --warm-encoders
+
+# Build the frozen reference over your ImageNet roots (one-time, heavy), then sanity-check
+IMAGENET_TRAIN=/data/imagenet/train IMAGENET_VAL=/data/imagenet/val bash scripts/run_refprep.sh
+python scripts/check_artifacts.py configs/imagenet.yaml
+
+# Post-train one-step ImageNet (8 GPU) and evaluate (SW_r14 + MMDr14 + off-objective PickScore)
+GPUS=8 bash scripts/train.sh configs/imagenet.yaml
+python reproduce.py eval-imagenet
+```
+
+## Evaluation is never the training objective
+
+The primary metric **SW_r14** (Sliced-Wasserstein, eq. 5) shares no machinery with the
+kernel MMD we train against, so a gain rules out reward hacking; `rdm/eval/` never imports the
+training loss path (enforced by `tests/test_offobjective_floor.py`). Four of the fourteen
+encoders are held out from training as a generalization check.
+
+## Implementation notes
+
+The paper and this release are consistent; the code is authoritative for exact values. A few
+choices worth knowing:
+
+1. **ImageNet learning rate `1.6e-6`** at N = 5120.
+2. **The within-batch repulsion is the biased MMD²** — the `i = i` diagonal is included and the
+   sum is divided by `N²` (not the unbiased off-diagonal U-statistic).
+3. **The FLUX joint feature** concatenates each battery encoder's image feature with a frozen
+   SigLIP2 **text** embedding τ(c): `Φ(x,c) = [φ(x) | β·τ(c)]` (the SigLIP image tower is not used).
+4. **The Nyström attraction** ships in the precomputed-coefficient form `k_gr = mean_i k(g_i, Z)·α`
+   with `α = K_ZZ⁻¹ μ̄` (algebraically equal to eq. 3's `ψ(g)ᵀμ̄`); the toy uses the explicit eigh
+   `K_mm^{-1/2}` feature map.
+5. **MMDr14 is the arithmetic mean** over the 14 encoders (iRDM 2.69).
+6. The released **pMF-H FD-SIM** network (`rdm/representation/models/pmfh_fdsim.py`, MiT-H backbone)
+   is vendored so the checkpoint loads; it is not retrained from scratch.
+
+> **FLUX config:** `configs/flux.yaml` is the joint (concat) recipe and uses the **same training
+> parameters as the marginal run** — only `joint_enable` differs (set `false` for the Table-2
+> marginal ablation). `grad_accum` is the memory knob: keep `rollout_size` fixed and, on smaller
+> GPUs, lower `batch_size` and raise `grad_accum` (`grad_accum = rollout_size / (batch_size × world_size)`).
+
+## Citation
+
+```bibtex
+@article{feng2026irdm,
+  title={Representation Distribution Matching for One-Step Visual Generation},
+  author={Feng, Lan and Li, Wuyang and Zablocki, {\'E}loi and Cord, Matthieu and Alahi, Alexandre},
+  year={2026}
+}
+```
+
+MIT (Copyright 2026 Lan Feng). See `docs/reproduction_map.md` for the artifact → command → paper-table map and
+`docs/method_notes.md` for the design log and pitfalls.

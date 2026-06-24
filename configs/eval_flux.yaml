@@ -1,0 +1,16 @@
+# FLUX text-to-image evaluation: GenEval (official mmdet protocol) + PickScore on the 500
+# Pick-a-Pic prompts. Renders one-step samples for the GenEval / Pick-a-Pic prompts.
+extends: base.yaml
+exp_name: irdm-flux-eval
+mode: flux
+img_size: 512
+num_sampling_steps: 1
+
+# GenEval: official protocol (6 categories + overall). External scorer (djghosh13/geneval).
+geneval_metadata: assets/geneval_prompts.jsonl
+geneval_n_per_prompt: 4
+geneval_repo: null            # set to a local clone of the official geneval scorer
+
+# PickScore: 500 Pick-a-Pic prompts.
+pickscore_prompts: assets/pickapic_test_prompts.jsonl
+ctx_pool: data/fid_stats/flux2/qwen3_ctx_coco.npy

@@ -1,0 +1,10 @@
+# Fig. 4 / Table 6: batch-size axis. Low-dim spiral version (toy/run_batch_axis); the
+# headline run is the single-encoder DINOv2 Nystrom arm at matched wall-clock (~6000 s) with
+# sqrt(N)-scaled lr -- those values are listed here for the full-scale reproduction.
+batches: [512, 1280, 2560, 5120, 10240]
+lr_by_batch: [5.06e-7, 8.0e-7, 1.13e-6, 1.6e-6, 2.26e-6]   # lr = 1.6e-6 * sqrt(N / 5120)
+budget_seconds: 6000
+encoder: dinov2
+# low-dim toy sweep:
+toy_batches: [8, 16, 32, 64, 128]
+toy_n_iters: 8000

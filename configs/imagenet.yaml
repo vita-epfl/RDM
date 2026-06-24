@@ -1,0 +1,50 @@
+# One-step ImageNet-256 generation: post-train the released pMF-H FD-SIM over the 10-encoder
+# battery with the gated PID-Lagrangian controller. ~80 H200-hrs (8 GPU).
+extends: base.yaml
+exp_name: irdm-imagenet-pmfh
+mode: imagenet
+
+# ---- Generator: pMF-H, warm-started from the released FD-SIM checkpoint ----
+model: pMF_H
+img_size: 256
+num_classes: 1000
+load_from: checkpoints/pMF-H_FD-SIM.pth   # released base weights (see scripts/download_checkpoints.py)
+rope_2d: true
+learned_pe: true
+disable_v_head: true
+noise_scale: 2.0
+num_sampling_steps: 1
+cfg: 7.0
+interval_min: 0.2
+interval_max: 0.6
+
+# ---- 10 training encoders (short names; the held-out 4 are evaluation-only) ----
+encoders: [inception, convnext, mae, clip, dinov3_l, pe_core_l, siglip2, aimv2_huge, webssl_dino_1b, dreamsim]
+encoder_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+nystrom_paths:
+  - data/fid_stats/bundles/nystrom/inception_nystrom_M4096.pt
+  - data/fid_stats/bundles/nystrom/convnext_nystrom_M4096.pt
+  - data/fid_stats/bundles/nystrom/mae_nystrom_M4096.pt
+  - data/fid_stats/bundles/nystrom/clip_nystrom_M4096.pt
+  - data/fid_stats/bundles/nystrom/dinov3_l_nystrom_M4096.pt
+  - data/fid_stats/bundles/nystrom/pe_core_l_nystrom_M4096.pt
+  - data/fid_stats/bundles/nystrom/siglip2_nystrom_M4096.pt
+  - data/fid_stats/bundles/nystrom/aimv2_huge_nystrom_M4096.pt
+  - data/fid_stats/bundles/nystrom/webssl_dino_1b_nystrom_M4096.pt
+  - data/fid_stats/bundles/nystrom/dreamsim_nystrom_M4096.pt
+
+# ---- gated PID-Lagrangian over the 10 encoders, fixed budget Sigma = 10 ----
+pid_enable: true
+pid_softmax_mode: true
+pid_total_lambda: 10.0
+pid_floors_json: data/fid_stats/imagenet_val_floors.json
+
+# ---- Optim / GradCache: N = batch_size * world_size * grad_accum = 8 * 8 * 80 = 5120 (8xH200) ----
+# grad_accum is the memory knob: it = rollout_size / (batch_size * world_size). KEEP
+# rollout_size fixed at 5120; on smaller GPUs DECREASE batch_size and INCREASE grad_accum
+# to match (num_chunks == grad_accum is asserted at runtime).
+lr: 1.6e-6                # constant; tuned for rollout_size 5120
+rollout_size: 5120
+batch_size: 8
+grad_accum: 80           # = rollout_size / (batch_size * world_size); 80 for 8xH200
+steps: 4000

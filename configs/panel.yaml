@@ -1,0 +1,6 @@
+# The fourteen-encoder panel (Table 5), mirror of rdm/representation/registry.py.
+# Ten supervise training; four are held out for evaluation only. (Authoritative source is
+# the registry; this file documents the split for configs/tests.)
+train:    [inception, convnext, mae, clip, dinov3_l, pe_core_l, siglip2, aimv2_huge, webssl_dino_1b, dreamsim]
+held_out: [dinov2, siglip_v1, cradiov3_l, flux_vae]
+nystrom_landmarks: 4096

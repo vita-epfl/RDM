@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "irdm"
+version = "0.1.0"
+description = "improved Representation Distribution Matching for one-step visual generation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Lan Feng" }]
+keywords = ["one-step generation", "distribution matching", "MMD", "Nystrom", "diffusion"]
+dependencies = [
+    "torch>=2.4",
+    "torchvision",
+    "numpy",
+    "scipy",
+    "pyyaml",
+    "safetensors",
+    "einops",
+    "pillow",
+    "tqdm",
+    "huggingface_hub",
+    "timm>=1.0.9",
+    "open_clip_torch",
+    "transformers",
+    "diffusers",
+    "pandas",
+    "tabulate",
+    "rich",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+encoders = ["dreamsim"]
+logging = ["wandb"]
+
+[tool.setuptools.packages.find]
+include = ["rdm*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

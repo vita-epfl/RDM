@@ -1,0 +1,30 @@
+# Base defaults shared by every run (the extends: root). Child keys override these.
+seed: 0
+output_dir: ./work_dirs
+exp_name: run
+print_freq: 1
+save_freq: 100
+
+# optimizer (AdamW, weight decay 0 -- the iRDM optimizer)
+beta1: 0.9
+beta2: 0.95
+weight_decay: 0.0
+grad_clip: 2.0
+lr_sched: constant
+
+# loss / gradient caching
+gen_chunk: 8192          # row-chunk for the checkpointed within-batch repulsion
+
+# proportional-Lagrangian controller (off by default -> uniform weighting)
+pid_enable: false
+pid_softmax_mode: true
+pid_kp: 1.0
+pid_ki: 0.0
+pid_kd: 0.0
+pid_normalized: false
+pid_cost_clip: 5.0
+pid_ema_beta: 0.5
+pid_temperature: 2.0
+
+# joint (text-to-image) objective off by default -> image marginal
+joint_enable: false

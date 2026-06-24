@@ -1,0 +1,10 @@
+# Fig. 3: the 3x6 spiral grid (batch size x distance). Self-contained, no data/weights.
+ambient_dim: 64
+batches: [8, 32, 128]
+methods: [fd, sw, drift, rff, exact, nystrom]
+n_iters: 8000            # --smoke uses ~120
+lr: 1.0e-3               # Adam, cosine to 1e-4, grad clip 2.0, seed 42
+sw_projections: 1000
+mmd_features_per_scale: 512
+multiscale: [0.1, 0.2, 0.4, 0.8, 1.6]
+recall_floor: 0.033

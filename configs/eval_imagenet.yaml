@@ -1,0 +1,30 @@
+# ImageNet evaluation: SW_r14 (primary) + MMDr14 (secondary) over the 14-encoder panel,
+# plus the class-prompt PickScore. Renders class-conditional latents, extracts the panel,
+# computes the ratios against the frozen eval banks (seed 99999).
+extends: base.yaml
+exp_name: irdm-imagenet-eval
+mode: imagenet
+model: pMF_H
+img_size: 256
+num_classes: 1000
+num_sampling_steps: 1
+cfg: 7.0
+interval_min: 0.2
+interval_max: 0.6
+
+# SW_r14: N=16384 samples per set, M=1024 projections, p=2.
+sw_n_samples: 16384
+sw_n_proj: 1024
+sw_p: 2
+# MMDr14: N=50000 samples, D=4096 random features.
+mmd_n_samples: 50000
+mmd_rff_D: 4096
+# PickScore (Fig. 6, off-objective auxiliary): 4000 class-conditional latents, scored with
+# the "a photo of a {classname}" prompts. Class names default to torchvision's ImageNet
+# categories (offline, no asset). Set imagenet_class_prompts to a JSON list to override.
+pickscore_n_latents: 4000
+# imagenet_class_prompts: assets/imagenet_class_prompts.json
+
+eval_rff_bundle_dir: data/fid_stats/bundles/eval_rff
+sw_bank_dir: data/fid_stats/bundles/eval_sw
+mmdr14_floors_json: data/fid_stats/mmdr14_val_floors.json

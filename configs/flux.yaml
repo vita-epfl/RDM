@@ -1,0 +1,53 @@
+# Text-to-image: post-train four-step FLUX.2 [klein] into a one-step model with the JOINT
+# image-text objective (concat single-RBF). ~80 H200-hrs.
+#
+# The joint (concat) run uses the SAME training params as the marginal run -- only
+# joint_enable differs: set joint_enable=false for the Table-2 marginal ablation, true for
+# the joint iRDM result. Recipe: concat single-RBF, sigma_img = 0.25*median (cold), text
+# weight 1, reference = 82K COCO + 4 FLUX-teacher seeds per prompt (~400K).
+extends: base.yaml
+exp_name: irdm-flux-klein-joint
+mode: flux
+
+# ---- Generator: FLUX.2 klein-4B, 4-step teacher -> 1-step student ----
+img_size: 512
+num_sampling_steps: 1
+grad_checkpointing: true      # 4B model: per-block checkpoint (bit-exact)
+compile_model: false          # set true on Hopper for ~1.8x (compile-outside-checkpoint)
+
+# ---- 10 training encoders (same battery as ImageNet), JOINT concat bundles ----
+encoders: [inception, convnext, mae, clip, dinov3_l, pe_core_l, siglip2, aimv2_huge, webssl_dino_1b, dreamsim]
+nystrom_paths:
+  - data/fid_stats/bundles/nystrom_joint/inception_joint_M4096.pt
+  - data/fid_stats/bundles/nystrom_joint/convnext_joint_M4096.pt
+  - data/fid_stats/bundles/nystrom_joint/mae_joint_M4096.pt
+  - data/fid_stats/bundles/nystrom_joint/clip_joint_M4096.pt
+  - data/fid_stats/bundles/nystrom_joint/dinov3_l_joint_M4096.pt
+  - data/fid_stats/bundles/nystrom_joint/pe_core_l_joint_M4096.pt
+  - data/fid_stats/bundles/nystrom_joint/siglip2_joint_M4096.pt
+  - data/fid_stats/bundles/nystrom_joint/aimv2_huge_joint_M4096.pt
+  - data/fid_stats/bundles/nystrom_joint/webssl_dino_1b_joint_M4096.pt
+  - data/fid_stats/bundles/nystrom_joint/dreamsim_joint_M4096.pt
+
+# ---- JOINT image-text coupling: Phi = [phi(x) | beta * tau(c)], tau = SigLIP2 text tower ----
+joint_enable: true                                          # false -> marginal ablation (Table 2)
+joint_text_psi: data/fid_stats/flux2/siglip2_text_coco.npy  # frozen tau(c); built by `rdm.refprep.run joint`
+# ctx_pool = FLUX.2's own text context over the COCO captions (row-aligned). Built with the
+# external flux2 text encoder (Qwen3), NOT by refprep -- the one FLUX artifact with no in-repo
+# builder (it lives behind the flux2 dependency). See docs/reproduction_map.md.
+ctx_pool: data/fid_stats/flux2/qwen3_ctx_coco.npy
+joint_bandwidth_scale: 0.25                                 # cold image kernel sigma_img = 0.25*median;
+                                                            # build-time only (baked into the joint bundles
+                                                            # by refprep --sigma-scale), not read at train.
+
+# ---- Optim / GradCache: N = batch_size * world_size * grad_accum = 8 * 8 * 160 = 10240 (8xH200) ----
+# grad_accum is the memory knob: it = rollout_size / (batch_size * world_size). The values
+# below are the 8xH200 default (matching scripts/train.sh GPUS=8); batch_size 8 fits with
+# per-block gradient checkpointing. KEEP rollout_size fixed at 10240; on fewer GPUs raise
+# grad_accum to match (4xH200 -> 320), on smaller GPUs lower batch_size and raise grad_accum.
+lr: 2.83e-6                   # constant; tuned for the FLUX joint at rollout_size 10240
+rollout_size: 10240
+batch_size: 8
+grad_accum: 160               # = rollout_size / (batch_size * world_size); 160 for 8xH200
+steps: 150
+grad_clip: 4.0                # tames the marginal-MMD self-norm floor spike

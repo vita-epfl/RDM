@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Large artifacts (downloaded / precomputed, never committed)
+checkpoints/
+work_dirs/
+data/fid_stats/
+data/imagenet/
+data/coco/
+*.pt
+*.pth
+*.npy
+*.npz
+*.safetensors
+
+# Outputs (generated samples, work-dir plots) -- but DO ship the paper figures
+*.png
+*.pdf
+!figures/
+!figures/*.png
+!figures/*.pdf
+reports/
+wandb/
+
+# OS / editor
+.DS_Store
+*.swp

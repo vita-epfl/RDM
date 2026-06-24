@@ -1,0 +1,30 @@
+# Core
+torch>=2.4
+torchvision
+numpy
+scipy
+pyyaml
+safetensors
+einops
+pillow                # image loading (rdm/data); usually transitive via torchvision
+tqdm                  # progress + imported at load by the pMF-H generator
+huggingface_hub       # scripts/download_checkpoints.py (released pMF-H weights)
+
+# Frozen encoder battery (Table 5)
+timm>=1.0.9            # inception, convnext, mae, clip, dinov3, pe-core, siglip2, aimv2, webssl
+open_clip_torch       # text tower tau(c) for the joint feature
+transformers          # SigLIP / FLUX.2 text + tokenizers
+diffusers             # FLUX.2 generator + VAE
+dreamsim              # DreamSim ensemble encoder (held-in)
+
+# Evaluation
+pandas
+tabulate
+
+# Logging / utilities
+rich
+matplotlib
+wandb                 # optional; training/eval run with it disabled by default
+
+# FLUX.2 text-to-image post-training needs a newer transformers than the ImageNet
+# path; see docs/README.md for the two-environment note.

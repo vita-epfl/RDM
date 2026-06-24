@@ -1,0 +1,21 @@
+# Table 4: training-distance ablation on a single DINOv2-cls encoder. Warm-start the same
+# pMF-H, fine-tune 100 steps flipping only the per-step distance; score with two neutral
+# third-party distances (SW ratio + RFF-MMD ratio). Order: mmdx > mmd_rff > mmd_exact > fd
+# > sw > drifting (drifting ~60 steps at its native batch).
+#
+# NOTE: this records the full-scale recipe; the runnable Table-4 artifact is the low-dim
+# version `python reproduce.py ablation-distance` (rdm/toy/run_ablations). The full-scale arm
+# needs a single-encoder DINOv2 Nystrom bundle (override nystrom_paths) and a trainer that
+# switches `distances`/`sigma` -- it is not driven by the standard scripts/train.sh launch.
+extends: imagenet.yaml
+exp_name: irdm-ablation-distance
+encoders: [dinov2]
+pid_enable: false
+steps: 100
+lr: 1.6e-6
+rollout_size: 5120
+sigma: 65.0                     # fixed RBF bandwidth for the three kernel arms (this ablation only)
+distances: [mmd_nystrom, mmd_rff, mmd_exact, fd, sw, drifting]
+sw_n_proj: 128
+drift_R_list: [0.2, 0.05, 0.02]
+drift_steps: 60

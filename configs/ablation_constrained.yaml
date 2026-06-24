@@ -1,0 +1,9 @@
+# Table 3: gated proportional-Lagrangian vs uniform weighting. Both warm-start pMF-H and
+# train 100 steps over the 10 encoders sharing a fixed budget Sigma = 10; only the
+# allocation differs (set pid_enable false for the uniform arm).
+extends: imagenet.yaml
+exp_name: irdm-ablation-constrained
+steps: 100
+pid_enable: true                # the gated controller; flip to false for the uniform control
+pid_softmax_mode: true
+pid_total_lambda: 10.0
