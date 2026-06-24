@@ -27,4 +27,5 @@ jobs:
             tests/test_toy.py \
             tests/test_paper_fixtures.py \
             tests/test_eval_harness.py \
-            tests/test_refprep.py
+            tests/test_refprep.py \
+            tests/test_flux_eval_wiring.py

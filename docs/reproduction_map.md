@@ -6,8 +6,8 @@
 | **Table 7** — MMDr14 (App D, iRDM 2.69) | `python reproduce.py eval-imagenet` | `configs/eval_imagenet.yaml` | RFF-MMD ratio, arithmetic mean over 14 encoders; N=50000, D=4096 |
 | **Fig. 6** — PickScore preference (off-objective) | `python reproduce.py eval-imagenet` | `configs/eval_imagenet.yaml` | 4000 class-conditional latents, `"a photo of a {classname}"` (torchvision class names, offline); mean PickScore. Matched-noise paired Δ vs the step-0 baseline isolates the training effect |
 | One-step ImageNet training | `GPUS=8 bash scripts/train.sh configs/imagenet.yaml` | `configs/imagenet.yaml` | pMF-H, 10 enc, Σ=10 PID, lr 1.6e-6, N=5120, 4000 steps |
-| **Table 2** — FLUX GenEval (joint 0.805 / marginal 0.779) | `GPUS=8 bash scripts/train.sh configs/flux.yaml` then `python reproduce.py eval-flux` | `configs/flux.yaml` | concat joint; set `joint_enable: false` for the marginal arm |
-| FLUX PickScore (21.69) | `python reproduce.py eval-flux` | `configs/eval_flux.yaml` | 500 Pick-a-Pic prompts |
+| **Table 2** — FLUX GenEval (joint 0.805 / marginal 0.779) | `GPUS=8 bash scripts/train.sh configs/flux.yaml` then `python reproduce.py eval-flux` | `configs/flux.yaml` | concat joint; set `joint_enable: false` for the marginal arm. Set `load_from` in `eval_flux.yaml` to the trained student (else the base klein-4B is evaluated); each prompt's Qwen3 context is encoded on the fly |
+| FLUX PickScore (21.69) | `python reproduce.py eval-flux` | `configs/eval_flux.yaml` | 499 Pick-a-Pic test prompts; context encoded per prompt, not sliced from `ctx_pool` |
 | **Fig. 3** — spiral 3×6 grid | `python reproduce.py fig3` | `configs/toy_spiral.yaml` | self-contained; Nyström sharpest in every row, floor 0.033 |
 | **Fig. 4 / Table 6** — batch-size axis | `python reproduce.py fig4` (low-dim) | `configs/toy_batch.yaml` | full-scale = single-encoder DINOv2 at matched wall-clock, √N lr |
 | **Table 4** — distance ablation | `python reproduce.py ablation-distance` (low-dim) | `configs/ablation_distance.yaml` | order mmdx ≻ mmd_rff ≻ mmd_exact ≻ fd ≻ sw ≻ drifting |
@@ -29,7 +29,7 @@ the driver with disjoint `--encoders` on different `CUDA_VISIBLE_DEVICES`.
 | `data/fid_stats/bundles/eval_sw/<enc>_{train,val}.pt` (14 enc) | `rdm.refprep.build_sw_bank` | SW_r14 |
 | `data/fid_stats/bundles/nystrom_joint/<enc>_joint_M4096.pt` | `rdm.refprep.build_joint_one` | FLUX joint loss |
 | `data/fid_stats/flux2/siglip2_text_coco.npy` (τ(c)) | `rdm.representation.text_encoder.encode_captions` | FLUX joint feature |
-| `data/fid_stats/flux2/qwen3_ctx_coco.npy` (generator text context) | FLUX text encoder over the prompts (not refprep) | FLUX generator conditioning |
+| `data/fid_stats/flux2/qwen3_ctx_coco.npy` (generator text context over **COCO captions**) | `python scripts/build_flux2_ctx.py --captions data/coco/coco_pairs.npz --out ... --ctx-len 48` (FLUX.2 Qwen3 encoder; not refprep) | FLUX **training** conditioning. Eval contexts are encoded per eval prompt at run time, not from this pool. See `docs/flux_reference.md` |
 
 The released **pMF-H FD-SIM** generator checkpoint is fetched by
 `python scripts/download_checkpoints.py --pmfh` (linked to `checkpoints/pMF-H_FD-SIM.pth`, the

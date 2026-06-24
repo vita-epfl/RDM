@@ -42,14 +42,14 @@ the ImageNet path is needed for the headline ImageNet result.
 - **ImageNet-256** — an `ImageFolder`-style tree (flat or class-nested) for train and val.
   Used only by the reference precompute and by evaluation, never by the training loop itself
   (which consumes the frozen banks). Pass the roots via `IMAGENET_TRAIN` / `IMAGENET_VAL`.
-- **COCO** (FLUX text-to-image only) — build the canonical one-caption-per-image pairing once:
-  ```bash
-  python scripts/prepare_datasets.py coco \
-      --captions <captions_train2014.json> --images <train2014> --out data/coco/coco_pairs.npz
-  ```
-- **Eval-only prompt assets** (FLUX) — GenEval metadata and the Pick-a-Pic test prompts are
-  external; place them at `assets/geneval_prompts.jsonl` / `assets/pickapic_test_prompts.jsonl`
-  (see `assets/README.md`). GenEval scoring also needs a local clone of the official scorer.
+- **COCO** (FLUX text-to-image only) — download train2014, build the canonical pairing, then
+  build the joint reference pack and the Qwen3 text context. The full pipeline (with commands)
+  is in **`docs/flux_reference.md`**; everything except the image download is in-repo and
+  runs on one GPU.
+- **Eval-only prompt assets** (FLUX) — the GenEval (553) and Pick-a-Pic (499) prompts are
+  **bundled** at `assets/geneval_prompts.jsonl` / `assets/pickapic_test_prompts.jsonl`
+  (see `assets/README.md`); each prompt's FLUX.2 context is encoded on the fly at eval time.
+  GenEval *scoring* also needs a local clone of the official scorer.
 
 ## Quickstart
 

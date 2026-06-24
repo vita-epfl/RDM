@@ -18,11 +18,14 @@ echo "[refprep] ImageNet reference -> ${OUT} (train=${IMAGENET_TRAIN} val=${IMAG
 python -m rdm.refprep.run imagenet \
   --train "${IMAGENET_TRAIN}" --val "${IMAGENET_VAL}" --out "${OUT}" --skip-existing
 
-# ---- FLUX joint reference (text-to-image; optional, needs the COCO pairing) ----
-# First build the pairing once:
-#   python scripts/prepare_datasets.py coco --captions <captions_train2014.json> \
-#       --images <train2014> --out data/coco/coco_pairs.npz
-# then uncomment:
-# python -m rdm.refprep.run joint --coco-pairs data/coco/coco_pairs.npz --out "${OUT}" --skip-existing
+# ---- FLUX joint reference (text-to-image; optional, needs COCO -- see docs/flux_reference.md) ----
+# 1) pairing:  python scripts/prepare_datasets.py coco --captions <captions_train2014.json> \
+#                  --images <train2014> --out data/coco/coco_pairs.npz
+# 2) joint pack (tau + 10 joint Nystrom bundles):
+#      python -m rdm.refprep.run joint --coco-pairs data/coco/coco_pairs.npz --out "${OUT}" --skip-existing
+# 3) training text context (ctx_pool) -- needs flux2 + GPU:
+#      python scripts/build_flux2_ctx.py --captions data/coco/coco_pairs.npz \
+#          --out "${OUT}/flux2/qwen3_ctx_coco.npy" --ctx-len 48
+#    then: python scripts/check_artifacts.py configs/flux.yaml
 
 echo "[refprep] done. Sanity check: python scripts/check_artifacts.py configs/imagenet.yaml"

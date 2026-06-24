@@ -2,7 +2,7 @@
 
 PickScore (Kirstain et al., 2023; ``yuvalkirstain/PickScore_v1``, a CLIP-ViT-H fine-tuned on
 Pick-a-Pic) scores image-text alignment with human preference. iRDM reports the raw mean
-PickScore over the 500 Pick-a-Pic prompts (FLUX) and a matched-noise paired win-rate against
+PickScore over the 499 Pick-a-Pic test prompts (FLUX) and a matched-noise paired win-rate against
 the prior best generator (ImageNet class prompts). Off-objective: nothing here touches the
 training loss.
 """

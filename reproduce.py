@@ -45,19 +45,39 @@ def main():
         print(f"launching: GPUS=${{GPUS:-8}} bash scripts/train.sh {config}")
         subprocess.run(["bash", "scripts/train.sh", config], check=True)
     elif args.artifact == "eval-flux":
+        import torch
+
         from rdm.data.prompts import load_geneval_metadata, load_jsonl_prompts
         from rdm.eval.flux_eval import evaluate_flux
+        from rdm.representation.flux_text_context import Flux2TextContextEncoder
         from rdm.train.launch import build_generator_from_config, load_config
-        from rdm.train.references import load_text_table
         cfg = load_config(args.config or "configs/eval_flux.yaml")
-        gen, _ = build_generator_from_config(cfg)
+        device = "cuda"
+        geneval_metadata = load_geneval_metadata(cfg.geneval_metadata)
+        geneval_prompts = [m["prompt"] for m in geneval_metadata]
+        pickscore_prompts = load_jsonl_prompts(cfg.pickscore_prompts)
+        # The FLUX context fed to the generator must be the Qwen3 encoding of the ACTUAL eval
+        # prompts -- NOT the COCO ctx_pool (slicing that renders COCO captions and scores them
+        # against the eval prompts). ctx_len must match the training ctx_pool's sequence length.
+        ctx_len = getattr(cfg, "flux_ctx_len", None)
+        if ctx_len is None and getattr(cfg, "ctx_pool", None) and os.path.exists(cfg.ctx_pool):
+            from rdm.train.references import load_text_table
+            ctx_len = int(load_text_table(cfg.ctx_pool).shape[1])
+        ctx_len = int(ctx_len or 48)
+        enc = Flux2TextContextEncoder(ctx_len=ctx_len,
+                                      flux2_src=getattr(cfg, "flux2_src", None), device=device)
+        geneval_ctx = enc.encode(geneval_prompts)
+        pickscore_ctx = enc.encode(pickscore_prompts)
+        del enc
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gen, _ = build_generator_from_config(cfg, device=device)   # loads cfg.load_from (student)
         res = evaluate_flux(
             gen,
-            pickscore_prompts=load_jsonl_prompts(cfg.pickscore_prompts),
-            pickscore_ctx=load_text_table(cfg.ctx_pool),
-            geneval_metadata=load_geneval_metadata(cfg.geneval_metadata),
-            geneval_ctx=load_text_table(cfg.ctx_pool),
-            geneval_repo=getattr(cfg, "geneval_repo", None))
+            pickscore_prompts=pickscore_prompts, pickscore_ctx=pickscore_ctx,
+            geneval_metadata=geneval_metadata, geneval_ctx=geneval_ctx,
+            n_geneval_per_prompt=getattr(cfg, "geneval_n_per_prompt", 4),
+            geneval_repo=getattr(cfg, "geneval_repo", None), device=device)
         print("FLUX eval:", res)
     elif args.artifact == "eval-imagenet":
         from rdm.eval.imagenet_eval import evaluate_imagenet, load_eval_banks

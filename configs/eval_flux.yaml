@@ -1,16 +1,27 @@
-# FLUX text-to-image evaluation: GenEval (official mmdet protocol) + PickScore on the 500
-# Pick-a-Pic prompts. Renders one-step samples for the GenEval / Pick-a-Pic prompts.
+# FLUX text-to-image evaluation: GenEval (official mmdet protocol) + PickScore on the 499
+# Pick-a-Pic test prompts. Renders one-step samples for the GenEval / Pick-a-Pic prompts --
+# each prompt's FLUX.2 (Qwen3) context is encoded on the fly from the prompt string.
 extends: base.yaml
 exp_name: irdm-flux-eval
 mode: flux
 img_size: 512
 num_sampling_steps: 1
 
+# The post-trained one-step student to evaluate (NOT the klein-4B base / 4-step teacher).
+# Point this at your training run's checkpoint; without it the eval runs the untrained base.
+load_from: work_dirs/irdm-flux-klein-joint/step_0000150.pth
+
 # GenEval: official protocol (6 categories + overall). External scorer (djghosh13/geneval).
 geneval_metadata: assets/geneval_prompts.jsonl
 geneval_n_per_prompt: 4
 geneval_repo: null            # set to a local clone of the official geneval scorer
 
-# PickScore: 500 Pick-a-Pic prompts.
+# PickScore: the 499 Pick-a-Pic test prompts.
 pickscore_prompts: assets/pickapic_test_prompts.jsonl
-ctx_pool: data/fid_stats/flux2/qwen3_ctx_coco.npy
+
+# FLUX.2 Qwen3 context length L: MUST match the ctx_len the training ctx_pool was built with,
+# so the eval prompts have the same sequence geometry the student saw. If unset, it is derived
+# from ctx_pool's shape (below). ctx_pool itself is NOT used for eval content (prompts are
+# encoded directly) -- it is only an optional source for ctx_len.
+flux_ctx_len: 48
+# ctx_pool: data/fid_stats/flux2/qwen3_ctx_coco.npy

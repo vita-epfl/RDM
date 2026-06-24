@@ -8,12 +8,15 @@ manually via the GradCache all-gather + an all-reduce average, so there is no DD
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from pathlib import Path
 from types import SimpleNamespace
 
 import torch
 import yaml
+
+logger = logging.getLogger("rdm")
 
 from ..representation.battery import Battery
 from ..representation.generators import build_generator
@@ -48,6 +51,28 @@ def build_adamw(params, cfg) -> torch.optim.Optimizer:
                              getattr(cfg, "beta2", 0.95)), weight_decay=getattr(cfg, "weight_decay", 0.0))
 
 
+def load_generator_weights(model, load_from: str, mode: str) -> None:
+    """Load a generator checkpoint into ``model`` for BOTH modes.
+
+    ``load_from`` is either the warm-start base (training) or the post-trained student
+    (evaluation). The checkpoint is ``{"model": state_dict, ...}`` as written by
+    :func:`save_checkpoint` (or a bare state_dict). The ImageNet pMF path remaps keys via
+    :func:`convert_pmf_checkpoint`; the FLUX path loads the ``Flux2AdapterModel`` state_dict
+    directly (same module that was saved). Without this, FLUX eval would silently run the
+    untrained klein-4B base instead of the student.
+    """
+    if not load_from:
+        return
+    sd = torch.load(load_from, map_location="cpu", weights_only=False)
+    sd = sd.get("model", sd) if isinstance(sd, dict) else sd
+    if mode != "flux":
+        sd = convert_pmf_checkpoint(sd)
+    missing, unexpected = model.load_state_dict(sd, strict=False)
+    if missing or unexpected:
+        logger.warning("[load_from] %s: %d missing / %d unexpected keys",
+                       load_from, len(missing), len(unexpected))
+
+
 def build_generator_from_config(cfg, device: str = "cuda"):
     """Construct the trainable generator (+ optional tokenizer) and its sampling wrapper."""
     mode = getattr(cfg, "mode", "imagenet")
@@ -69,10 +94,7 @@ def build_generator_from_config(cfg, device: str = "cuda"):
             noise_scale=getattr(cfg, "noise_scale", 2.0), rope_2d=getattr(cfg, "rope_2d", True),
             learned_pe=getattr(cfg, "learned_pe", True),
             disable_v_head=getattr(cfg, "disable_v_head", True)).to(device)
-        if getattr(cfg, "load_from", ""):
-            sd = torch.load(cfg.load_from, map_location="cpu", weights_only=False)
-            sd = sd.get("model", sd)
-            model.load_state_dict(convert_pmf_checkpoint(sd), strict=False)
+    load_generator_weights(model, getattr(cfg, "load_from", ""), mode)
     generator = build_generator(mode, model, sampling_args, args=cfg, tokenizer=tokenizer)
     return generator, model
 

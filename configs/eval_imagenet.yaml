@@ -7,6 +7,9 @@ mode: imagenet
 model: pMF_H
 img_size: 256
 num_classes: 1000
+# The post-trained one-step student to evaluate. Point this at your training run's
+# checkpoint; without it the eval runs an untrained pMF-H.
+load_from: work_dirs/irdm-imagenet-pmfh/step_0004000.pth
 num_sampling_steps: 1
 cfg: 7.0
 interval_min: 0.2
