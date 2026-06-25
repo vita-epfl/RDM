@@ -21,8 +21,9 @@ from rdm.representation.flux_text_context import FLUX2_QWEN3_DIM, Flux2TextConte
 class _FakeEmbedder:
     """Stands in for flux2's Qwen3Embedder: returns (b, max_length, 7680) bf16."""
 
-    def __init__(self):
+    def __init__(self, model_spec=None, device=None):
         self.max_length = 512
+        self.model_spec = model_spec
 
     def __call__(self, prompts):
         return torch.zeros(len(prompts), self.max_length, FLUX2_QWEN3_DIM, dtype=torch.bfloat16)
@@ -37,6 +38,7 @@ def _install_fake_flux2():
 
     te = types.ModuleType("flux2.text_encoder")
     te.load_qwen3_embedder = load_qwen3_embedder
+    te.Qwen3Embedder = _FakeEmbedder          # explicit-model-id path bypasses load_qwen3_embedder
     sys.modules["flux2"] = types.ModuleType("flux2")
     sys.modules["flux2.text_encoder"] = te
     return captured
@@ -69,6 +71,18 @@ def test_flux_text_context_empty_is_well_shaped():
         _uninstall_fake_flux2()
 
 
+def test_flux_text_context_custom_model_id_offline():
+    """model_id (e.g. bf16 Qwen/Qwen3-4B for offline) goes via Qwen3Embedder, not the FP8 loader."""
+    _install_fake_flux2()
+    try:
+        enc = Flux2TextContextEncoder(ctx_len=32, model_id="Qwen/Qwen3-4B", device="cpu")
+        assert enc.embedder.model_spec == "Qwen/Qwen3-4B"   # bypassed the FP8 load_qwen3_embedder
+        assert enc.embedder.max_length == 32
+        assert enc.encode(["x"]).shape == (1, 32, FLUX2_QWEN3_DIM)
+    finally:
+        _uninstall_fake_flux2()
+
+
 def test_load_generator_weights_flux_loads_student():
     from rdm.train.launch import load_generator_weights
     src = torch.nn.Linear(8, 8)
@@ -88,6 +102,15 @@ def test_load_generator_weights_noop_when_unset():
     dst = torch.nn.Linear(4, 4)
     w0 = dst.weight.clone()
     load_generator_weights(dst, "", "flux")                 # empty load_from -> no-op, no crash
+    assert torch.allclose(dst.weight, w0)
+
+
+def test_load_generator_weights_skips_missing_file():
+    """A non-empty but missing load_from warns and runs the base -- it must NOT crash."""
+    from rdm.train.launch import load_generator_weights
+    dst = torch.nn.Linear(4, 4)
+    w0 = dst.weight.clone()
+    load_generator_weights(dst, "/no/such/checkpoint_xyz.pth", "flux")
     assert torch.allclose(dst.weight, w0)
 
 

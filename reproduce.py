@@ -64,7 +64,7 @@ def main():
             from rdm.train.references import load_text_table
             ctx_len = int(load_text_table(cfg.ctx_pool).shape[1])
         ctx_len = int(ctx_len or 48)
-        enc = Flux2TextContextEncoder(ctx_len=ctx_len,
+        enc = Flux2TextContextEncoder(ctx_len=ctx_len, model_id=getattr(cfg, "flux_text_model", None),
                                       flux2_src=getattr(cfg, "flux2_src", None), device=device)
         geneval_ctx = enc.encode(geneval_prompts)
         pickscore_ctx = enc.encode(pickscore_prompts)

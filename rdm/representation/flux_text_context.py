@@ -15,6 +15,12 @@ the same sequence geometry the student was trained on. Faithful to the offline b
 per-prompt chat template with ``enable_thinking=False``, pad/truncate to ``ctx_len``, hidden
 layers ``[9, 18, 27]`` stacked. Lazy-imports the external ``flux2`` package (point to it with
 the ``FLUX2_SRC`` env var or ``flux2_src=``), so this module imports even where flux2 is absent.
+
+Offline note: the default ``Qwen/Qwen3-4B-FP8`` resolves the finegrained-fp8 / deep-gemm
+matmul kernels from the Hub at load time (and needs the ``kernels`` package), which fails on
+an air-gapped node even with a warm cache. Pass ``model_id="Qwen/Qwen3-4B"`` (bf16, same
+hidden states, no kernels) for offline use. Use the SAME ``model_id`` to build the training
+ctx_pool and to evaluate, so the text features match.
 """
 from __future__ import annotations
 
@@ -40,13 +46,18 @@ def _ensure_flux2_importable(flux2_src: str | None = None) -> None:
 class Flux2TextContextEncoder(nn.Module):
     """Frozen FLUX.2 Qwen3 text encoder: ``list[str]`` -> ``(B, ctx_len, 7680)`` context."""
 
-    def __init__(self, ctx_len: int, variant: str = "4B", flux2_src: str | None = None,
-                 device: str = "cuda"):
+    def __init__(self, ctx_len: int, variant: str = "4B", model_id: str | None = None,
+                 flux2_src: str | None = None, device: str = "cuda"):
         super().__init__()
         _ensure_flux2_importable(flux2_src)
-        from flux2.text_encoder import load_qwen3_embedder
-        logger.info("[flux2-text] loading Qwen3-%s embedder (ctx_len=%d)", variant, ctx_len)
-        self.embedder = load_qwen3_embedder(variant=variant, device=device)
+        if model_id:                                   # explicit model id (e.g. offline bf16)
+            from flux2.text_encoder import Qwen3Embedder
+            logger.info("[flux2-text] loading %s (ctx_len=%d)", model_id, ctx_len)
+            self.embedder = Qwen3Embedder(model_spec=model_id, device=device)
+        else:                                          # faithful default: Qwen/Qwen3-<variant>-FP8
+            from flux2.text_encoder import load_qwen3_embedder
+            logger.info("[flux2-text] loading Qwen3-%s-FP8 embedder (ctx_len=%d)", variant, ctx_len)
+            self.embedder = load_qwen3_embedder(variant=variant, device=device)
         self.embedder.max_length = int(ctx_len)        # fixed pad/truncate length L
         self.ctx_len = int(ctx_len)
         self.device = device
@@ -65,8 +76,9 @@ class Flux2TextContextEncoder(nn.Module):
 
 @torch.no_grad()
 def encode_flux2_context(prompts: list[str], ctx_len: int, *, variant: str = "4B",
-                         flux2_src: str | None = None, device: str = "cuda",
-                         batch: int = 16) -> torch.Tensor:
+                         model_id: str | None = None, flux2_src: str | None = None,
+                         device: str = "cuda", batch: int = 16) -> torch.Tensor:
     """One-shot prompts -> ``(N, ctx_len, 7680)`` FLUX.2 context (fp32, CPU)."""
-    enc = Flux2TextContextEncoder(ctx_len, variant=variant, flux2_src=flux2_src, device=device)
+    enc = Flux2TextContextEncoder(ctx_len, variant=variant, model_id=model_id,
+                                  flux2_src=flux2_src, device=device)
     return enc.encode(prompts, batch=batch)

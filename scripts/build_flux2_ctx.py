@@ -55,14 +55,20 @@ def main():
     ap.add_argument("--out", required=True, help="output .npy")
     ap.add_argument("--ctx-len", type=int, default=48, help="sequence length L (match training!)")
     ap.add_argument("--variant", default="4B")
+    ap.add_argument("--model-id", default=None,
+                    help="explicit text model id; use Qwen/Qwen3-4B (bf16) for offline nodes "
+                         "where the default Qwen/Qwen3-4B-FP8 can't fetch its fp8 kernels")
+    ap.add_argument("--max-images", type=int, default=None, help="cap prompts (quick test only)")
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--flux2-src", default=None, help="path to the flux2 package (else FLUX2_SRC)")
     args = ap.parse_args()
 
     prompts = _load_prompts(args)
+    if args.max_images:
+        prompts = prompts[:args.max_images]
     print(f"[flux2-ctx] {len(prompts)} prompts -> {args.out} "
           f"(ctx_len={args.ctx_len}, dim={FLUX2_QWEN3_DIM})")
-    enc = Flux2TextContextEncoder(args.ctx_len, variant=args.variant,
+    enc = Flux2TextContextEncoder(args.ctx_len, variant=args.variant, model_id=args.model_id,
                                   flux2_src=args.flux2_src, device="cuda")
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     mm = np.lib.format.open_memmap(args.out, mode="w+", dtype=np.float16,

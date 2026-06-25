@@ -7,9 +7,11 @@ mode: imagenet
 model: pMF_H
 img_size: 256
 num_classes: 1000
-# The post-trained one-step student to evaluate. Point this at your training run's
-# checkpoint; without it the eval runs an untrained pMF-H.
-load_from: work_dirs/irdm-imagenet-pmfh/step_0004000.pth
+# Checkpoint to evaluate. Defaults to the released pMF-H FD-SIM weights fetched by
+# `scripts/download_checkpoints.py --pmfh` (so the download -> eval flow works out of the box);
+# point it at your training run's student (e.g. work_dirs/irdm-imagenet-pmfh/step_0004000.pth)
+# to evaluate the post-trained model. A missing path warns and runs the untrained base.
+load_from: checkpoints/pMF-H_FD-SIM.pth
 num_sampling_steps: 1
 cfg: 7.0
 interval_min: 0.2

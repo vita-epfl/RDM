@@ -17,6 +17,13 @@ dominated by the per-encoder image-feature extraction).
 > Prerequisite: the external `flux2` package (Black Forest Labs) and the klein-4B / AE weight
 > snapshots, reachable via `FLUX2_SRC` + `HF_HOME` (see the main README). The FLUX.2 Qwen3
 > text encoder (`Qwen/Qwen3-4B-FP8`) downloads lazily on first use.
+>
+> **Offline / air-gapped nodes:** the default `Qwen/Qwen3-4B-FP8` resolves its finegrained-fp8
+> (deep-gemm) matmul kernels from the Hub at load time and needs the `kernels` package — this
+> fails on a no-network node even with a warm `HF_HOME` cache. Use the bf16 model instead:
+> pass `--model-id Qwen/Qwen3-4B` to `build_flux2_ctx.py` and set `flux_text_model:
+> Qwen/Qwen3-4B` in `configs/eval_flux.yaml`. Same hidden states, no extra kernels. Build the
+> training ctx_pool and evaluate with the **same** id so the text features match.
 
 ## 1. Download COCO (train2014)
 

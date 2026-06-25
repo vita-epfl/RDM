@@ -63,14 +63,21 @@ def load_generator_weights(model, load_from: str, mode: str) -> None:
     """
     if not load_from:
         return
+    if not os.path.exists(load_from):
+        # Documented contract: a missing checkpoint runs the untrained base, it does not crash
+        # (so eval-flux won't die only after encoding all the prompts on the GPU).
+        logger.warning("[load_from] %s not found -- skipping; running the UNTRAINED base. "
+                       "Point load_from at a trained checkpoint to evaluate the student.", load_from)
+        return
     sd = torch.load(load_from, map_location="cpu", weights_only=False)
     sd = sd.get("model", sd) if isinstance(sd, dict) else sd
     if mode != "flux":
         sd = convert_pmf_checkpoint(sd)
     missing, unexpected = model.load_state_dict(sd, strict=False)
     if missing or unexpected:
-        logger.warning("[load_from] %s: %d missing / %d unexpected keys",
-                       load_from, len(missing), len(unexpected))
+        logger.warning("[load_from] %s: %d missing / %d unexpected keys (missing e.g. %s; "
+                       "unexpected e.g. %s)", load_from, len(missing), len(unexpected),
+                       list(missing)[:3], list(unexpected)[:3])
 
 
 def build_generator_from_config(cfg, device: str = "cuda"):
