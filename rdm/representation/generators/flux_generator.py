@@ -225,9 +225,14 @@ class Flux2VAETokenizer(nn.Module):
     def decode(self, z):
         return self.vae.decode(z.to(dtype=next(self.vae.parameters()).dtype))   # (B,3,H,W) in [-1,1]
 
-    @torch.inference_mode()
     def detokenize(self, z, decode_bsz: int | None = None):
-        """Chunked decode -> ``[0, 1]`` pixels."""
+        """Chunked decode -> ``[0, 1]`` pixels.
+
+        NOT ``@torch.inference_mode()``: training renders through this path and needs gradients to
+        flow through the (frozen) VAE back to the latent/generator. Eval callers already run under
+        ``torch.no_grad``, so no graph is built there either way. (The chunked ``torch.empty`` branch
+        is eval-only -- training micro-batches are ``<= decode_bsz`` and take the single-shot branch.)
+        """
         if decode_bsz is None:
             pixels_per_sample = z.shape[-2] * z.shape[-1]
             decode_bsz = max(1, 64 * (32 * 32) // pixels_per_sample)

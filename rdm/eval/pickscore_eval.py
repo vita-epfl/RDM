@@ -27,12 +27,17 @@ class PickScorer:
         ``do_rescale`` divide by 255 a second time and corrupt the score.
         """
         from torchvision.transforms.functional import to_pil_image
-        pil = [to_pil_image(img.cpu().clamp(0, 1)) for img in images]   # float[0,1] -> uint8 PIL
+        pil = [to_pil_image(img.float().cpu().clamp(0, 1)) for img in images]   # float[0,1] -> uint8 PIL
+        # .float(): FLUX renders under bf16 autocast; to_pil_image -> numpy chokes on BFloat16.
         img_in = self.processor(images=pil, return_tensors="pt").to(self.device)
         txt_in = self.processor(text=prompts, padding=True, truncation=True,
                                 max_length=77, return_tensors="pt").to(self.device)
-        img_e = torch.nn.functional.normalize(self.model.get_image_features(**img_in), dim=-1)
-        txt_e = torch.nn.functional.normalize(self.model.get_text_features(**txt_in), dim=-1)
+        # transformers >=5.x returns a BaseModelOutputWithPooling whose `.pooler_output` holds the
+        # PROJECTED CLIP embedding; older versions returned the tensor directly. Handle both.
+        def _emb(o):
+            return o if torch.is_tensor(o) else o.pooler_output
+        img_e = torch.nn.functional.normalize(_emb(self.model.get_image_features(**img_in)), dim=-1)
+        txt_e = torch.nn.functional.normalize(_emb(self.model.get_text_features(**txt_in)), dim=-1)
         logit_scale = self.model.logit_scale.exp()
         return (logit_scale * (img_e * txt_e).sum(-1))   # (B,) PickScore per pair
 
