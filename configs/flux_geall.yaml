@@ -1,0 +1,42 @@
+# Headline FLUX run: the "geALLcoco" mix reference (ALL GenEval-correct teacher imgs + COCO-top3,
+# 302149 rows, GenEval mass 17.8%) + the matched x32 generator pool. Lifts GenEval composition over
+# the COCO-image baseline (configs/flux.yaml). Build the assets from scratch per
+# docs/flux_geall_assets.md (or transfer a prebuilt copy and verify with that doc's checklist).
+#
+# Same joint objective / optimizer as flux.yaml -- only the reference + generator pool + Nystrom M differ.
+extends: flux.yaml
+exp_name: irdm-flux-klein-geall
+
+# ---- geALLcoco mix joint bundles (concat [phi | beta*tau], w=1 => beta=sigma, cold sigma x0.25, M=8192) ----
+nystrom_paths:
+  - data/fid_stats/bundles/nystrom_joint/inception_joint_M8192.pt
+  - data/fid_stats/bundles/nystrom_joint/convnext_joint_M8192.pt
+  - data/fid_stats/bundles/nystrom_joint/mae_joint_M8192.pt
+  - data/fid_stats/bundles/nystrom_joint/clip_joint_M8192.pt
+  - data/fid_stats/bundles/nystrom_joint/dinov3_l_joint_M8192.pt
+  - data/fid_stats/bundles/nystrom_joint/pe_core_l_joint_M8192.pt
+  - data/fid_stats/bundles/nystrom_joint/siglip2_joint_M8192.pt
+  - data/fid_stats/bundles/nystrom_joint/aimv2_huge_joint_M8192.pt
+  - data/fid_stats/bundles/nystrom_joint/webssl_dino_1b_joint_M8192.pt
+  - data/fid_stats/bundles/nystrom_joint/dreamsim_joint_M8192.pt
+
+# ---- generator pool: COCO 82783 + GenEval 553 x32 = 100479 (ctx + tau row-aligned) ----
+joint_text_psi: data/fid_stats/flux2/siglip2_text_geall_g32.npy   # tau(c), 100479 x 1152
+ctx_pool: data/fid_stats/flux2/qwen3_ctx_geall_g32.npy            # FLUX.2 Qwen3 ctx, 100479 x 48 x 7680
+num_classes: 100479                                               # MUST equal ctx_pool / psi rows
+
+# ---- 300 steps, milestone checkpoints every 20 (the paper evaluates s20..s300) ----
+steps: 300
+save_freq: 20
+
+# ---- 8xH200 default: N = batch*world*grad_accum = 8*8*160 = 10240 ----
+# On a 94 GB H100 the fp32 klein-4B + AdamW states + frozen battery leave too little for bs8; set
+# battery_bf16 (stores the frozen ViT encoders in bf16, features ~unchanged) and lower batch_size --
+# GradCache keeps the result bit-exact at fixed rollout_size. e.g. 8 nodes x 4 H100: batch_size 2,
+# grad_accum 160 (= 10240/(2*32)). See docs/flux_geall_assets.md.
+# battery_bf16: true
+
+# ---- optional Weights & Biases logging (off by default) ----
+# wandb_enable: true
+# wandb_project: irdm-flux
+# wandb_name: irdm-flux-klein-geall

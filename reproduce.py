@@ -77,7 +77,8 @@ def main():
             pickscore_prompts=pickscore_prompts, pickscore_ctx=pickscore_ctx,
             geneval_metadata=geneval_metadata, geneval_ctx=geneval_ctx,
             n_geneval_per_prompt=getattr(cfg, "geneval_n_per_prompt", 4),
-            geneval_repo=getattr(cfg, "geneval_repo", None), device=device)
+            geneval_repo=getattr(cfg, "geneval_repo", None),
+            out_dir=getattr(cfg, "output_dir", "work_dirs/flux_eval"), device=device)
         print("FLUX eval:", res)
     elif args.artifact == "eval-imagenet":
         from rdm.eval.imagenet_eval import evaluate_imagenet, load_eval_banks

@@ -14,6 +14,11 @@ All of (2) and (3) are built **in-repo** from the COCO download with the steps b
 needs to be uploaded. Everything except the image download runs on one GPU (a few GPU-hours,
 dominated by the per-encoder image-feature extraction).
 
+> This page builds the **baseline** reference (real COCO images, M4096). The paper's **headline** run
+> uses the richer teacher-rendered + curated "geALLcoco" mix (M8192, GenEval-correct + COCO-top3, a ×32
+> generator pool) — its from-scratch build + asset spec are in
+> [`docs/flux_geall_assets.md`](flux_geall_assets.md); the recipe config is `configs/flux_geall.yaml`.
+
 > Prerequisite: the external `flux2` package (Black Forest Labs) and the klein-4B / AE weight
 > snapshots, reachable via `FLUX2_SRC` + `HF_HOME` (see the main README). The FLUX.2 Qwen3
 > text encoder (`Qwen/Qwen3-4B-FP8`) downloads lazily on first use.

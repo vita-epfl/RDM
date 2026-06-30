@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,7 +24,8 @@ from ..representation.generators import build_generator
 from ..representation.models import convert_pmf_checkpoint, pMFDenoiser_models
 from ..utils.distributed import is_main_process, setup_distributed
 from ..utils.io import save_bundle
-from ..utils.logging import setup_logging
+from ..utils.distributed import get_world_size
+from ..utils.logging import setup_logging, setup_wandb
 from ..utils.seed import fix_random_seeds
 from .data import ClassConditioner, PromptConditioner
 from .joint_objective import JointObjective
@@ -115,6 +117,11 @@ def build_trainer(cfg, device: str = "cuda") -> Trainer:
     references = load_reference_packs(bundle_paths, weights, device=device)
     battery = Battery([__import__("rdm.representation.registry", fromlist=["by_name"]).by_name(n)
                        for n in names], device=device)
+    if getattr(cfg, "battery_bf16", False):                  # fit smaller GPUs: store the frozen ViT
+        for enc in battery.encoders.values():                # encoder WEIGHTS in bf16 (~10 GB saved).
+            if not getattr(enc, "has_logits", False):        # Their forward already runs under bf16
+                enc.to(torch.bfloat16)                       # autocast, so features are ~unchanged;
+        logger.info("[battery] frozen ViT encoders cast to bf16 (Inception kept fp32)")  # Inception fp32.
 
     pid = None
     if getattr(cfg, "pid_enable", False):
@@ -163,14 +170,50 @@ def main():
     trainer = build_trainer(cfg, device=device)
     out_dir = os.path.join(getattr(cfg, "output_dir", "./work_dirs"), getattr(cfg, "exp_name", "run"))
     os.makedirs(out_dir, exist_ok=True)
+
+    # wandb (main process only); metric schema mirrors the original FD-Loss run (train/ + perf/).
+    wandb_run = None
+    if is_main_process():
+        wandb_run = setup_wandb(project=getattr(cfg, "wandb_project", "irdm"),
+                                name=getattr(cfg, "wandb_name", None) or getattr(cfg, "exp_name", "run"),
+                                config=vars(cfg), enabled=getattr(cfg, "wandb_enable", False),
+                                entity=getattr(cfg, "wandb_entity", None), resume="allow")
+
     total = int(cfg.steps)
+    print_freq = getattr(cfg, "print_freq", 1)
+    session_start = time.time()
+    samples_seen = 0
     for _ in range(total):
+        t0 = time.time()
         logs = trainer.step()
-        if is_main_process() and trainer.step_idx % getattr(cfg, "print_freq", 1) == 0:
+        dt = max(time.time() - t0, 1e-9)
+        samples_seen += cfg.rollout_size
+        if is_main_process() and trainer.step_idx % print_freq == 0:
             print(f"step {logs['step']}  loss {logs['loss']:.5f}  grad_norm {logs['grad_norm']}")
+        if wandb_run is not None and trainer.step_idx % print_freq == 0:
+            step = logs["step"]
+            sps = cfg.rollout_size / dt                                       # global throughput
+            mem_gb = (torch.cuda.max_memory_reserved() / 1e9) if torch.cuda.is_available() else 0.0
+            elapsed = time.time() - session_start
+            eta = elapsed / step * (total - step) if step > 0 else 0.0
+            metrics = {"train/loss": logs["loss"], "train/grad_norm": logs["grad_norm"],
+                       "train/lr": trainer.optimizer.param_groups[0]["lr"],
+                       "train/samples_seen_M": samples_seen / 1e6,
+                       "perf/samples_per_sec": sps, "perf/samples_per_sec_per_device": sps / world,
+                       "perf/max_reserved_mem_gb": mem_gb,
+                       "perf/elapsed_real_hours": elapsed / 3600,
+                       "perf/elapsed_device_hours": elapsed / 3600 * world,
+                       "perf/eta_real_hours": eta / 3600,
+                       **{f"train/{k}": v for k, v in logs.get("raw_scores", {}).items()}}
+            wandb_run.log({k: v for k, v in metrics.items() if v is not None}, step=step)
         if trainer.step_idx % getattr(cfg, "save_freq", 100) == 0:
             save_checkpoint(trainer, out_dir)
     save_checkpoint(trainer, out_dir)
+    if is_main_process() and torch.cuda.is_available():
+        print(f"[mem] peak reserved {torch.cuda.max_memory_reserved() / 1e9:.1f} GB "
+              f"of {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
+    if wandb_run is not None:
+        wandb_run.finish()
 
 
 if __name__ == "__main__":
