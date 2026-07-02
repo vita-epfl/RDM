@@ -34,6 +34,12 @@ data/coco/
 reports/
 wandb/
 
+# Internal / experiment-only leftovers -- NEVER publish (hardcode cluster paths + private assets)
+DEPLOYMENT_TEST_NOTES.md
+configs/*_kuma*.yaml
+configs/eval_flux_*_s20*.yaml
+assets/pickapic_train_prompts.jsonl
+
 # OS / editor
 .DS_Store
 *.swp

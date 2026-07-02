@@ -2,12 +2,13 @@
 
 | Paper artifact | Command | Config | Notes |
 |---|---|---|---|
-| **Table 1** — SW_r14 (ImageNet, iRDM 1.30) | `python reproduce.py eval-imagenet` | `configs/eval_imagenet.yaml` | render 4000+ latents → `rdm.eval.sw_r14`; N=16384, M=1024 projections |
-| **Table 7** — MMDr14 (App D, iRDM 2.69) | `python reproduce.py eval-imagenet` | `configs/eval_imagenet.yaml` | RFF-MMD ratio, arithmetic mean over 14 encoders; N=50000, D=4096 |
+| **Table 1** — SW_r14 (ImageNet, iRDM 1.30) | `python reproduce.py eval-imagenet` | `configs/eval_imagenet.yaml` | render 16384 class-conditional latents → `rdm.eval.sw_r14`; N=16384, M=1024 projections |
+| **Table 7** — MMDr14 (App D, iRDM 2.69) | `python reproduce.py eval-imagenet` | `configs/eval_imagenet.yaml` | RFF-MMD ratio, arithmetic mean over 14 encoders (D=4096 baked into the eval banks). The shipped command computes it over the **same** 16384-sample render as SW_r14; the paper value used N=50000 |
 | **Fig. 6** — PickScore preference (off-objective) | `python reproduce.py eval-imagenet` | `configs/eval_imagenet.yaml` | 4000 class-conditional latents, `"a photo of a {classname}"` (torchvision class names, offline); mean PickScore. Matched-noise paired Δ vs the step-0 baseline isolates the training effect |
 | One-step ImageNet training | `GPUS=8 bash scripts/train.sh configs/imagenet.yaml` | `configs/imagenet.yaml` | pMF-H, 10 enc, Σ=10 PID, lr 1.6e-6, N=5120, 4000 steps |
-| **Table 2** — FLUX GenEval (joint 0.805 / marginal 0.779) | `GPUS=8 bash scripts/train.sh configs/flux.yaml` then `python reproduce.py eval-flux` | `configs/flux.yaml` | concat joint; set `joint_enable: false` for the marginal arm. Set `load_from` in `eval_flux.yaml` to the trained student (else the base klein-4B is evaluated); each prompt's Qwen3 context is encoded on the fly |
-| FLUX PickScore (21.69) | `python reproduce.py eval-flux` | `configs/eval_flux.yaml` | 499 Pick-a-Pic test prompts; context encoded per prompt, not sliced from `ctx_pool` |
+| **Table 2** — FLUX GenEval (joint 0.805 / marginal 0.779) | `GPUS=8 bash scripts/train.sh configs/flux.yaml` then `python reproduce.py eval-flux` | `configs/flux.yaml` | concat joint; set `joint_enable: false` for the marginal arm. `eval_flux.yaml` `load_from` defaults to the **released** s180 student (`--flux`); point it at your own run to evaluate that. Each prompt's Qwen3 context is encoded on the fly. Generation seeds + canonical mmdet scoring: [`geneval_protocol.md`](geneval_protocol.md) |
+| FLUX PickScore (paper 21.69) | `python reproduce.py eval-flux --config configs/eval_flux_pspa.yaml` | `configs/eval_flux_pspa.yaml` | 499 Pick-a-Pic test prompts @ **ctx_len 232** (the headline protocol; the default `eval_flux.yaml` ctx48 truncates long prompts and depresses PickScore to ~21.2). Context encoded per prompt, not sliced from `ctx_pool`. **21.69 is the paper's own-run number**; `eval_flux_pspa.yaml` inherits the **released** s180 `load_from`, which scores PickScore-pa ≈ 21.82 (card 21.817, see [`evaluating_released_checkpoints.md`](evaluating_released_checkpoints.md)) — point `load_from` at your own run to reproduce the paper value |
+| **Released-checkpoint eval** (both models) | see [`evaluating_released_checkpoints.md`](evaluating_released_checkpoints.md) | `eval_flux.yaml` / `eval_imagenet.yaml` | full download → score recipe: env, the external GenEval scorer, the ImageNet eval banks, expected numbers |
 | **Fig. 3** — spiral 3×6 grid | `python reproduce.py fig3` | `configs/toy_spiral.yaml` | self-contained; Nyström sharpest in every row, floor 0.033 |
 | **Fig. 4 / Table 6** — batch-size axis | `python reproduce.py fig4` (low-dim) | `configs/toy_batch.yaml` | full-scale = single-encoder DINOv2 at matched wall-clock, √N lr |
 | **Table 4** — distance ablation | `python reproduce.py ablation-distance` (low-dim) | `configs/ablation_distance.yaml` | order mmdx ≻ mmd_rff ≻ mmd_exact ≻ fd ≻ sw ≻ drifting |
@@ -31,8 +32,11 @@ the driver with disjoint `--encoders` on different `CUDA_VISIBLE_DEVICES`.
 | `data/fid_stats/flux2/siglip2_text_coco.npy` (τ(c)) | `rdm.representation.text_encoder.encode_captions` | FLUX joint feature |
 | `data/fid_stats/flux2/qwen3_ctx_coco.npy` (generator text context over **COCO captions**) | `python scripts/build_flux2_ctx.py --captions data/coco/coco_pairs.npz --out ... --ctx-len 48` (FLUX.2 Qwen3 encoder; not refprep) | FLUX **training** conditioning. Eval contexts are encoded per eval prompt at run time, not from this pool. See `docs/flux_reference.md` |
 
-The released **pMF-H FD-SIM** generator checkpoint is fetched by
-`python scripts/download_checkpoints.py --pmfh` (linked to `checkpoints/pMF-H_FD-SIM.pth`, the
-configs' `load_from`); the 14 panel encoders download lazily on first use. The FLUX.2
-klein-4B / AE weights and the external `flux2` package are pointed to via `FLUX2_SRC` +
-`HF_HOME` (see README).
+The two released generators are fetched by `python scripts/download_checkpoints.py --pmfh`
+(ImageNet pMF-H FD-SIM, [`Lanl11/pMF-H-FDSIM-imagenet256-sigma07-4k`](https://huggingface.co/Lanl11/pMF-H-FDSIM-imagenet256-sigma07-4k)
+→ `checkpoints/pMF-H_FD-SIM.pth`) and `--flux` (FLUX.2 klein one-step student,
+[`epfl-vita/flux2-klein-1step-rdm`](https://huggingface.co/epfl-vita/flux2-klein-1step-rdm)
+→ `checkpoints/flux2_klein_1step_rdm_geallcoco_s180.pth`); each is linked to the flat name its
+config's `load_from` points at. The 14 panel encoders download lazily on first use. The FLUX.2
+klein-4B / AE weights and the external `flux2` package are pointed to via `FLUX2_SRC` + `HF_HOME`
+(see README). Full recipe + expected numbers: [`evaluating_released_checkpoints.md`](evaluating_released_checkpoints.md).

@@ -1,0 +1,11 @@
+# FLUX PickScore-pa axis for the RELEASED s180 student: Pick-a-Pic 499 @ ctx_len 232.
+# ctx_len 232 is the headline PickScore protocol -- ctx_len 48 (the training geometry, right for the
+# short GenEval prompts) truncates ~53 long Pick-a-Pic prompts and depresses PickScore to ~21.2.
+# Inherits load_from (the released checkpoint) + pickscore_prompts from eval_flux.yaml.
+extends: eval_flux.yaml
+exp_name: irdm-flux-eval-pspa
+flux_ctx_len: 232
+flux_text_model: Qwen/Qwen3-4B          # bf16, same hidden states as the FP8 build, no deep-gemm kernels
+geneval_n_per_prompt: 1                  # minimal GenEval render; this run's signal is PickScore-pa
+geneval_repo: null
+output_dir: work_dirs/flux_eval_pspa

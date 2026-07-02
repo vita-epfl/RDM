@@ -18,8 +18,10 @@ FLUX.2 [klein] into a one-step model that surpasses it on GenEval (0.805 vs 0.79
 
 ```bash
 pip install -e .            # torch, timm, open_clip, transformers, diffusers, ...
-# DreamSim (held-in encoder): pip install dreamsim
-# FLUX.2 path also needs the external `flux2` package + a newer transformers (separate env).
+# DreamSim (held-in encoder, required for eval-imagenet): pip install dreamsim   (or: pip install -e .[encoders])
+# FLUX.2 path also needs Black Forest Labs' `flux2` package (https://github.com/black-forest-labs/flux2 --
+#   clone it and point FLUX2_SRC at its `src/`), the klein-4B + AE base weights, and a newer transformers
+#   (separate env). See docs/flux_reference.md for the full FLUX.2 setup.
 ```
 
 ## Layout
@@ -69,6 +71,30 @@ GPUS=8 bash scripts/train.sh configs/imagenet.yaml
 python reproduce.py eval-imagenet
 ```
 
+## Released checkpoints
+
+Two one-step generators are published; both are drop-in `load_from` checkpoints that the eval
+configs already point at. **`docs/evaluating_released_checkpoints.md`** is the full download → score
+recipe (env, the external GenEval scorer, the ImageNet eval banks, expected numbers).
+
+> The released FLUX geALLcoco **s180** checkpoint scores **GenEval 0.826** — higher than the paper's
+> clean Table-2 run (0.805 above) because its reference mix is partly in-distribution (see the doc).
+> The FLUX student weights are a derivative of FLUX.2 [klein]-4B (Apache-2.0). Both checkpoint
+> repos are public; override with `--pmfh-repo` / `--flux-repo` if you re-host.
+
+```bash
+python scripts/download_checkpoints.py --flux    # FLUX.2 klein one-step student  -> GenEval + PickScore
+python reproduce.py eval-flux                                      # GenEval axis   (ctx48)
+python reproduce.py eval-flux --config configs/eval_flux_pspa.yaml # PickScore-pa   (ctx232)
+python scripts/download_checkpoints.py --pmfh    # ImageNet-256 pMF-H generator -> SW_r14 + MMDr14 + PickScore
+python reproduce.py eval-imagenet
+```
+
+| checkpoint | HF repo | access |
+|---|---|---|
+| FLUX.2 klein-4B one-step (geALLcoco s180) | [`epfl-vita/flux2-klein-1step-rdm`](https://huggingface.co/epfl-vita/flux2-klein-1step-rdm) | public |
+| ImageNet-256 pMF-H FD-SIM (σ0.7, 4k) | [`Lanl11/pMF-H-FDSIM-imagenet256-sigma07-4k`](https://huggingface.co/Lanl11/pMF-H-FDSIM-imagenet256-sigma07-4k) | public |
+
 ## Evaluation is never the training objective
 
 The primary metric **SW_r14** (Sliced-Wasserstein, eq. 5) shares no machinery with the
@@ -108,5 +134,7 @@ choices worth knowing:
 }
 ```
 
-MIT (Copyright 2026 Lan Feng). See `docs/reproduction_map.md` for the artifact → command → paper-table map and
-`docs/method_notes.md` for the design log and pitfalls.
+MIT (Copyright 2026 Lan Feng). Third-party vendored/referenced components (FD-Loss networks, the
+tf-compat Inception encoder, FLUX.2) and their licenses are listed in `THIRD_PARTY.md`. See
+`docs/reproduction_map.md` for the artifact → command → paper-table map and `docs/method_notes.md`
+for the design log and pitfalls.

@@ -33,8 +33,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-encoders = ["dreamsim"]
+encoders = ["dreamsim"]   # DreamSim: a held-in ImageNet battery encoder; required for `eval-imagenet`
 logging = ["wandb"]
+dev = ["pytest"]
 
 [tool.setuptools.packages.find]
 include = ["rdm*"]

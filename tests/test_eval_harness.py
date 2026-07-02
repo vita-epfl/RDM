@@ -28,13 +28,16 @@ def test_geneval_categories():
 
 
 def test_geneval_summary(tmp_path="/tmp/irdm_geneval_test.jsonl"):
+    # `overall` is the UNWEIGHTED mean of the per-task rates (canonical GenEval / summary_scores.py),
+    # NOT the per-image mean: here colors=0.5, counting=1.0, single_object=1.0 -> 0.8333, whereas the
+    # per-image mean over the 4 rows would be 0.75. Absent categories are excluded from the average.
     rows = [{"tag": "colors", "correct": True}, {"tag": "colors", "correct": False},
             {"tag": "counting", "correct": True}, {"tag": "single_object", "correct": True}]
     write_jsonl(rows, tmp_path)
     s = summarize_official_results(tmp_path)
     assert abs(s["colors"] - 0.5) < 1e-9
     assert abs(s["counting"] - 1.0) < 1e-9
-    assert abs(s["overall"] - 0.75) < 1e-9
+    assert abs(s["overall"] - (0.5 + 1.0 + 1.0) / 3) < 1e-9
 
 
 def test_pickscore_mean_and_winrate():

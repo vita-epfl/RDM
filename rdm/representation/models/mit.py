@@ -1,3 +1,9 @@
+"""MiT (Mix Transformer) backbone for the pMF-H FD-SIM denoiser.
+
+Vendored faithfully from the FD-Loss release (Lu et al., 2026; Yang et al., 2026) so the
+released ``pMF-H_FD-SIM`` checkpoint loads bit-exact (see :mod:`.pmfh_fdsim`). This is upstream
+network code, not original to iRDM -- see ``THIRD_PARTY.md`` for provenance and licensing.
+"""
 import logging
 import math
 from functools import partial

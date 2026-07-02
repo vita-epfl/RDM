@@ -8,6 +8,10 @@ text-to-image metrics:
 * **PickScore** (Kirstain et al., 2023) -- a learned human-preference proxy never optimized,
   on the 499 Pick-a-Pic test prompts (:mod:`rdm.eval.pickscore_eval`); iRDM 21.69 vs 4-step 21.85.
 
+These are the paper's own-run numbers. ``configs/eval_flux.yaml`` defaults ``load_from`` to the
+**released** geALLcoco s180 student, which scores higher (GenEval 0.826 / PickScore-pa 21.82) --
+see ``docs/evaluating_released_checkpoints.md``.
+
 Off-objective: imports only the metric harnesses + the generator, never the training loss.
 """
 import os

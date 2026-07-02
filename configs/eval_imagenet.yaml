@@ -8,20 +8,28 @@ model: pMF_H
 img_size: 256
 num_classes: 1000
 # Checkpoint to evaluate. Defaults to the released pMF-H FD-SIM weights fetched by
-# `scripts/download_checkpoints.py --pmfh` (so the download -> eval flow works out of the box);
-# point it at your training run's student (e.g. work_dirs/irdm-imagenet-pmfh/step_0004000.pth)
-# to evaluate the post-trained model. A missing path warns and runs the untrained base.
+# `scripts/download_checkpoints.py --pmfh` (public repo Lanl11/pMF-H-FDSIM-imagenet256-sigma07-4k;
+# override with --pmfh-repo if you re-host). Point it at your training
+# run's student (e.g. work_dirs/irdm-imagenet-pmfh/step_0004000.pth) to evaluate the post-trained
+# model. A missing path warns and runs the untrained base.
+# NOTE: eval-imagenet ALSO needs the SW/MMD reference banks below (built by scripts/run_refprep.sh
+# over real ImageNet train+val) -- these are NOT shipped, so this is not a zero-setup run. See
+# docs/evaluating_released_checkpoints.md.
 load_from: checkpoints/pMF-H_FD-SIM.pth
 num_sampling_steps: 1
 cfg: 7.0
 interval_min: 0.2
 interval_max: 0.6
 
-# SW_r14: N=16384 samples per set, M=1024 projections, p=2.
+# SW_r14 render size (CONSUMED by eval-imagenet): N=16384 samples per set. sw_r14 itself uses
+# M=1024 projections, p=2 (its code defaults) -- the two keys below are those reference values,
+# NOT read by the eval path.
 sw_n_samples: 16384
-sw_n_proj: 1024
-sw_p: 2
-# MMDr14: N=50000 samples, D=4096 random features.
+sw_n_proj: 1024          # reference (M); matches rdm.eval.sw_r14 default, not read by eval-imagenet
+sw_p: 2                  # reference (p); matches rdm.eval.sw_r14 default, not read by eval-imagenet
+# MMDr14 reference protocol (paper: N=50000 samples, D=4096 RFF baked into the eval_rff banks). The
+# shipped eval-imagenet computes MMDr14 over the SAME sw_n_samples render above; both keys below are
+# reference values, NOT read by the eval path.
 mmd_n_samples: 50000
 mmd_rff_D: 4096
 # PickScore (Fig. 6, off-objective auxiliary): 4000 class-conditional latents, scored with

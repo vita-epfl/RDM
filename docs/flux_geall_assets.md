@@ -5,8 +5,8 @@
 and reproduce the Table-2 joint number.
 
 The paper's **headline** FLUX run uses a richer, fully *teacher-rendered + curated* reference —
-the "geALLcoco" mix — which lifts GenEval composition. Those assets are large (a 74 GB generator
-context, ~300 K reference rows × 10 encoders), so a deployment usually **transfers** a prebuilt
+the "geALLcoco" mix — which lifts GenEval composition. Those assets are large (a 74 GB / 69 GiB
+generator context, ~300 K reference rows × 10 encoders), so a deployment usually **transfers** a prebuilt
 copy rather than rebuilding. This document records how to build them **from scratch** with the
 in-repo tooling, and the exact asset spec so a transferred copy can be verified.
 
@@ -36,9 +36,9 @@ The two pieces split by how expensive they are to recreate:
 
 - **The joint Nyström bundles** (773 MB) encode the teacher-render + GenEval/PickScore **curation** —
   the expensive, hard-to-reproduce part. **Download them.**
-- **The generator context** (~69 GB `qwen3_ctx`) and **text table** (442 MB `siglip2_text`) are just
+- **The generator context** (~74 GB `qwen3_ctx`) and **text table** (442 MB `siglip2_text`) are just
   Qwen3 / SigLIP2 **text encodings** of the COCO captions + GenEval prompts — cheap and deterministic
-  to recompute. **Build them locally** (don't download 69 GB).
+  to recompute. **Build them locally** (don't download 74 GB).
 
 ```bash
 # 1. bundles + reference psi  <-  Hugging Face  (~1.2 GB)
@@ -64,7 +64,7 @@ The downloaded bundle file names already match `configs/flux_geall.yaml` (iRDM e
 both steps, `python scripts/check_artifacts.py configs/flux_geall.yaml` should pass and you can train.
 
 > If you also want the prebuilt generator context (to skip step 2) or the trained s20 student, ask the
-> dataset owner — they are not in the public repo by default because of their size (69 GB / 15 GB).
+> dataset owner — they are not in the public repo by default because of their size (74 GB / 15 GB).
 
 ## From-scratch build (full pipeline, if you need to rebuild the bundles too)
 

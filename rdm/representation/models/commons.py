@@ -1,3 +1,9 @@
+"""Common layers (linear, RMSNorm, SwiGLU, patch embed, RoPE) for the MiT / pMF-H network.
+
+Vendored faithfully from the FD-Loss release (Lu et al., 2026; Yang et al., 2026); shared by
+:mod:`.mit` and :mod:`.pmfh_fdsim`. Upstream network code, not original to iRDM -- see
+``THIRD_PARTY.md`` for provenance and licensing.
+"""
 import math
 
 import torch

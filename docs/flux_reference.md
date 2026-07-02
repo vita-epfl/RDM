@@ -19,9 +19,23 @@ dominated by the per-encoder image-feature extraction).
 > generator pool) — its from-scratch build + asset spec are in
 > [`docs/flux_geall_assets.md`](flux_geall_assets.md); the recipe config is `configs/flux_geall.yaml`.
 
-> Prerequisite: the external `flux2` package (Black Forest Labs) and the klein-4B / AE weight
-> snapshots, reachable via `FLUX2_SRC` + `HF_HOME` (see the main README). The FLUX.2 Qwen3
-> text encoder (`Qwen/Qwen3-4B-FP8`) downloads lazily on first use.
+> **Prerequisite — the external FLUX.2 stack (not fetched for you).** The klein-4B generator
+> wrapper (`rdm/representation/generators/flux_generator.py`) imports Black Forest Labs' native
+> `flux2` package and loads its base weights from your Hugging Face cache:
+>
+> ```bash
+> # 1. the flux2 package (Black Forest Labs)
+> git clone https://github.com/black-forest-labs/flux2
+> export FLUX2_SRC="$PWD/flux2/src"          # or pass flux2_src= to Flux2AdapterModel
+> # 2. the base weights, pre-downloaded into HF_HOME (compute nodes are often offline):
+> export HF_HOME=/path/to/hf_cache
+> huggingface-cli download black-forest-labs/FLUX.2-klein-4B flux-2-klein-4b.safetensors
+> huggingface-cli download black-forest-labs/FLUX.2-dev      ae.safetensors   # the native loader pulls the AE from the dev repo
+> ```
+>
+> iRDM replaces only the klein-4B **DiT** weights (via `load_from`); the VAE/AE and the Qwen3 text
+> encoder are reused unchanged. The FLUX.2 Qwen3 text encoder (`Qwen/Qwen3-4B-FP8`) downloads lazily
+> on first use.
 >
 > **Offline / air-gapped nodes:** the default `Qwen/Qwen3-4B-FP8` resolves its finegrained-fp8
 > (deep-gemm) matmul kernels from the Hub at load time and needs the `kernels` package — this
