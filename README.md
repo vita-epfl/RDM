@@ -1,4 +1,4 @@
-# iRDM — improved Representation Distribution Matching for One-Step Visual Generation
+# RDM — Representation Distribution Matching for One-Step Visual Generation
 
 Train a **one-step** image generator with **no teacher, no adversary, no trajectory** by
 matching generated and real feature distributions under a battery of frozen pretrained
