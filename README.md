@@ -24,7 +24,7 @@
 
 ---
 
-Train a **one-step** image generator with **no teacher, no adversary, no trajectory** by
+Train a **one-step** image generator with **no online teacher, no adversary, no trajectory** by
 matching generated and real feature distributions under a battery of frozen pretrained
 encoders. iRDM combines the preferred choice on each of the two design axes of RDM:
 
@@ -36,7 +36,7 @@ encoders. iRDM combines the preferred choice on each of the two design axes of R
   balance by a **proportional Lagrangian controller**.
 
 It sets the one-step ImageNet state of the art at **SW_r14 1.30**, and post-trains four-step
-FLUX.2 [klein] into a one-step model that surpasses it on GenEval (0.805 vs 0.794).
+FLUX.2 [klein] into a one-step model that surpasses it on GenEval (0.826 vs 0.794).
 
 ## Install
 
@@ -101,8 +101,8 @@ Two one-step generators are published; both are drop-in `load_from` checkpoints 
 configs already point at. **`docs/evaluating_released_checkpoints.md`** is the full download → score
 recipe (env, the external GenEval scorer, the ImageNet eval banks, expected numbers).
 
-> The released FLUX geALLcoco **s180** checkpoint scores **GenEval 0.826** — higher than the paper's
-> clean Table-2 run (0.805 above) because its reference mix is partly in-distribution (see the doc).
+> The released FLUX geALLcoco **s180** checkpoint scores **GenEval 0.826**; its reference mix is
+> partly in-distribution (see the doc).
 > The FLUX student weights are a derivative of FLUX.2 [klein]-4B (Apache-2.0). Both checkpoint
 > repos are public; override with `--pmfh-repo` / `--flux-repo` if you re-host.
 
