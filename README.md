@@ -1,6 +1,30 @@
-# RDM — Representation Distribution Matching for One-Step Visual Generation
+<div align="center">
 
-Train a **one-step** image generator with **no teacher, no adversary, no trajectory** by
+# Representation Distribution Matching for One-Step Visual Generation
+
+*One step from real.*
+
+**Lan Feng**<sup>1</sup> &nbsp;·&nbsp; **Wuyang Li**<sup>1</sup> &nbsp;·&nbsp; **Éloi Zablocki**<sup>2</sup> &nbsp;·&nbsp; **Matthieu Cord**<sup>2,3</sup> &nbsp;·&nbsp; **Alexandre Alahi**<sup>1</sup>
+
+<sup>1</sup>EPFL &nbsp;&nbsp;·&nbsp;&nbsp; <sup>2</sup>Valeo.ai &nbsp;&nbsp;·&nbsp;&nbsp; <sup>3</sup>Sorbonne Université
+
+[![Project Page](https://img.shields.io/badge/Project_Page-E8972B?style=for-the-badge&logoColor=white)](https://alan-lanfeng.github.io/rdm/)
+[![Paper](https://img.shields.io/badge/Paper-PDF-b31b1b?style=for-the-badge)](https://alan-lanfeng.github.io/rdm/RDM.pdf)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/spaces/epfl-vita/flux2-klein-1step-demo)
+[![Checkpoints](https://img.shields.io/badge/Checkpoints-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/epfl-vita/flux2-klein-1step-rdm)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f?style=for-the-badge)](LICENSE)
+
+<br/>
+
+<img src="figures/teaser.jpg" alt="iRDM post-trains four-step FLUX.2 [klein] into a one-step generator at matched quality; GenEval and PickScore climb past the four-step teacher in about 90 H200 GPU-hours." width="100%"/>
+
+<sub><em>iRDM post-trains four-step FLUX.2&nbsp;[klein] into a <b>one-step</b> generator at matched quality — one network evaluation, no iterative sampling.</em></sub>
+
+</div>
+
+---
+
+Train a **one-step** image generator with **no online teacher, no adversary, no trajectory** by
 matching generated and real feature distributions under a battery of frozen pretrained
 encoders. iRDM combines the preferred choice on each of the two design axes of RDM:
 
@@ -12,7 +36,7 @@ encoders. iRDM combines the preferred choice on each of the two design axes of R
   balance by a **proportional Lagrangian controller**.
 
 It sets the one-step ImageNet state of the art at **SW_r14 1.30**, and post-trains four-step
-FLUX.2 [klein] into a one-step model that surpasses it on GenEval (0.805 vs 0.794).
+FLUX.2 [klein] into a one-step model that surpasses it on GenEval (0.826 vs 0.794).
 
 ## Install
 
@@ -77,8 +101,8 @@ Two one-step generators are published; both are drop-in `load_from` checkpoints 
 configs already point at. **`docs/evaluating_released_checkpoints.md`** is the full download → score
 recipe (env, the external GenEval scorer, the ImageNet eval banks, expected numbers).
 
-> The released FLUX geALLcoco **s180** checkpoint scores **GenEval 0.826** — higher than the paper's
-> clean Table-2 run (0.805 above) because its reference mix is partly in-distribution (see the doc).
+> The released FLUX geALLcoco **s180** checkpoint scores **GenEval 0.826**; its reference mix is
+> partly in-distribution (see the doc).
 > The FLUX student weights are a derivative of FLUX.2 [klein]-4B (Apache-2.0). Both checkpoint
 > repos are public; override with `--pmfh-repo` / `--flux-repo` if you re-host.
 
