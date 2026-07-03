@@ -9,7 +9,8 @@
 <sup>1</sup>EPFL &nbsp;&nbsp;·&nbsp;&nbsp; <sup>2</sup>Valeo.ai &nbsp;&nbsp;·&nbsp;&nbsp; <sup>3</sup>Sorbonne Université
 
 [![Project Page](https://img.shields.io/badge/Project_Page-E8972B?style=for-the-badge&logoColor=white)](https://alan-lanfeng.github.io/rdm/)
-[![Paper](https://img.shields.io/badge/Paper-PDF-b31b1b?style=for-the-badge)](https://alan-lanfeng.github.io/rdm/RDM.pdf)
+[![arXiv](https://img.shields.io/badge/arXiv-2607.02375-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2607.02375)
+[![Paper](https://img.shields.io/badge/Paper-PDF-4b4b4b?style=for-the-badge)](https://alan-lanfeng.github.io/rdm/RDM.pdf)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/spaces/epfl-vita/flux2-klein-1step-demo)
 [![Checkpoints](https://img.shields.io/badge/Checkpoints-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/epfl-vita/flux2-klein-1step-rdm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f?style=for-the-badge)](LICENSE)
@@ -154,6 +155,7 @@ choices worth knowing:
 @article{feng2026irdm,
   title={Representation Distribution Matching for One-Step Visual Generation},
   author={Feng, Lan and Li, Wuyang and Zablocki, {\'E}loi and Cord, Matthieu and Alahi, Alexandre},
+  journal={arXiv preprint arXiv:2607.02375},
   year={2026}
 }
 ```
